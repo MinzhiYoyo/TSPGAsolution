@@ -1,6 +1,6 @@
 # TSPGAsolution
 
-中文 | [English]
+中文 | [English](https://github.com/MinzhiYoyo/TSPGAsolution?tab=readme-ov-file)
 
 TSP的GA实现
 

@@ -1,6 +1,6 @@
 # TSPGAsolution
 
-[中文]() | English
+[中文](https://github.com/MinzhiYoyo/TSPGAsolution/blob/main/README_zh.md) | English
 
 An implement of GA for TSP
 
