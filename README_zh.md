@@ -41,7 +41,7 @@ python3 GA.py  # test
 - 交叉率: 0.8
 - 变异率: 0.3
 - 选择方法: 轮盘赌
-- 交叉方法: 点[这](#交叉方法) 
+- 交叉方法: 点[这](https://github.com/MinzhiYoyo/TSPGAsolution/blob/main/README_zh.md#%E4%BA%A4%E5%8F%89%E6%96%B9%E6%B3%95) 
 - 变异方法: 随机交换路径中的两个点
 
 # 下一代生成

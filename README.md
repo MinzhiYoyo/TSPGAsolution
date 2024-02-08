@@ -41,7 +41,7 @@ And you need to change the code to fit your own needs. Usually you just change t
 - crossover rate: 0.8
 - mutation rate: 0.3
 - selection method: roulette wheel selection
-- crossover method: click [here](#Corssover Method) 
+- crossover method: click [here](https://github.com/MinzhiYoyo/TSPGAsolution?tab=readme-ov-file#next-generation) 
 - mutation method: randomly swap two points in the path
 
 # Next Generation
