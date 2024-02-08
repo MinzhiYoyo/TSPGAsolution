@@ -43,7 +43,7 @@ class TSPGA:
             plt.plot(x, y, c='r')
 
         if draw_costs and route is not None:
-            plt.text(0, -8, 'costs:{:.4f}'.format(self.evaluate(route)), fontsize=8)
+            plt.text(0, -self.node_num//9, 'costs:{:.4f}'.format(self.evaluate(route)), fontsize=8)
         plt.pause(0.1)
 
     # 评估路径
@@ -139,7 +139,21 @@ class GA:
                 last_costs = self.costs[self.idx[0]]
         print(f'最终代第{self.generation_num}代{self.population.shape[0]}个个体最优成本为{self.costs[self.idx[0]]}')
         if save_path:
-            np.save(save_path, rst)
+            if os.path.exists(save_path):
+                data = np.load(save_path)
+                node_num_of_data = data.shape[1]
+                if node_num_of_data == self.node_num:
+                    my_best_costs = self.tsp.evaluate(self.population[self.idx[0]])
+                    data_best_costs = self.tsp.evaluate(data[-1])
+                    print(f'当前最优成本为{my_best_costs}，数据中最优成本为{data_best_costs}', end=', ')
+                    if my_best_costs < data_best_costs:
+                        print('保存当前结果')
+                        np.save(save_path, rst)
+                    else:
+                        print('不保存当前结果')
+            else:
+                print('无存在的文件，直接保存当前结果')
+                np.save(save_path, rst)
 
     def first_population(self):
         self.population = np.array([np.random.permutation(self.node_num - 1) for _ in range(self.population_num)])
@@ -158,7 +172,8 @@ class GA:
         """
         next_population = np.zeros(shape=(self.population.shape[0], self.population.shape[1]), dtype=np.int64)
         i = 0
-        while i < self.population_num//4:
+        s = self.population_num//4 if separate else self.population_num
+        while i < s:
             # 选择
             parents = self.select(num=parents_num)
             # 交叉
