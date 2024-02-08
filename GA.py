@@ -19,15 +19,31 @@ class TSPGA:
         if save_path:
             self.save(save_path)
 
-    def render(self, route: np.ndarray):
+    def render(self,title=None, route: np.ndarray = None, draw_notes=True, draw_route=True, draw_costs=True, draw_node_info=False):
         # 画出每个点，然后依次按route画路由，显示costs和rewards，并且不阻塞
         plt.cla()
-        plt.title('TSP')
-        plt.scatter(self.nodes[:, 0], self.nodes[:, 1], c='b')
-        # self.nodes 总共包含 self.node_num 个节点，依次连接，并且最后一个节点连接第一个节点
-        x = np.hstack((self.nodes[route[:self.node_num], 0], self.nodes[route[0], 0]))
-        y = np.hstack((self.nodes[route[:self.node_num], 1], self.nodes[route[0], 1]))
-        plt.plot(x, y, c='r')
+        if title:
+            plt.title(title)
+
+        if draw_notes:
+            # 画除了起点外所有的点
+            plt.scatter(self.nodes[1:, 0], self.nodes[1:, 1], c='b', s=5)
+            # 画起点，使用一个五角星，并且大一点
+            plt.scatter(self.nodes[0, 0], self.nodes[0, 1], c='g', marker='*', s=100)
+            # 是否标数字与坐标
+            if draw_node_info:
+                for i in range(self.node_num):
+                    info = '{:^2d}({:^2d},{:^2d})'.format(i, self.nodes[i, 0], self.nodes[i, 1])
+                    plt.text(self.nodes[i, 0]+0.2, self.nodes[i, 1]+0.2, info, fontsize=8)
+
+        if draw_route and route is not None:
+            # self.nodes 总共包含 self.node_num 个节点，依次连接，并且最后一个节点连接第一个节点
+            x = np.hstack((self.nodes[route[:self.node_num], 0], self.nodes[route[0], 0]))
+            y = np.hstack((self.nodes[route[:self.node_num], 1], self.nodes[route[0], 1]))
+            plt.plot(x, y, c='r')
+
+        if draw_costs and route is not None:
+            plt.text(0, -8, 'costs:{:.4f}'.format(self.evaluate(route)), fontsize=8)
         plt.pause(0.1)
 
     # 评估路径
@@ -88,25 +104,44 @@ class GA:
         self.tsp = TSPGA(node_num, file_path=file_path, save_path=save_path)
 
     # 定义模拟
-    def simulate(self, crossover_num=1, convergence_exit=False, separate=False):
-        self.init_population()
+    def simulate(self, crossover_num=1, convergence_exit:int=None, separate:bool=False, save_path:str=None, show:bool=False):
+        """
+        遗传算法仿真全过程
+        :param crossover_num: 是否优化交叉方案，如果为1，表示只有一个父母，表示不优化交叉方案；如果为2，表示有两个父母，表示优化交叉方案
+        :param convergence_exit: 收敛后是否自动退出，如果为None，表示不自动退出，如果为int表示，退出的计数次数
+        :param separate: 是否优化下一代生成算法，True表示优化下一代生成算法，即(上代优解，交叉且变异，交叉不变异，变异不交叉)
+        :param save_path: 结果保存路径，保存每一代的结果
+        :param show: 是否可视化显示
+        :return:
+        """
+        self.first_population()
+        # 保存每一代的最优结果
+        rst = np.zeros(shape=(self.generation_num, self.node_num), dtype=np.int64)
+        rst[0] = self.population[self.idx[0]]
         last_costs = self.costs[self.idx[0]]
-        count = 10
-        for i in range(self.generation_num):
-            print(f'第{i}代{self.population.shape[0]}个个体最优成本为{self.costs[self.idx[0]]}')
-            self.next_generation(parents_num=crossover_num, separate=separate)
-            self.tsp.render(self.population[self.idx[0]])
-            if convergence_exit:
+        if convergence_exit is not None:
+            count = convergence_exit
+        else:
+            count = 0
+        for i in range(self.generation_num-1):
+            print(f'第{i+1}代{self.population.shape[0]}个个体最优成本为{self.costs[self.idx[0]]}')
+            self.next_population(parents_num=crossover_num, separate=separate)
+            rst[i+1] = self.population[self.idx[0]]
+            if show:
+                self.tsp.render(route=self.population[self.idx[0]])
+            if convergence_exit is not None:
                 if abs(last_costs - self.costs[self.idx[0]]) < 1e-12:
                     count -= 1
                     if count == 0:
                         break
                 else:
-                    count = 10
+                    count = convergence_exit
                 last_costs = self.costs[self.idx[0]]
-        print(f'最终{self.population.shape[0]}个个体最优成本为{self.costs[self.idx[0]]}')
+        print(f'最终代第{self.generation_num}代{self.population.shape[0]}个个体最优成本为{self.costs[self.idx[0]]}')
+        if save_path:
+            np.save(save_path, rst)
 
-    def init_population(self):
+    def first_population(self):
         self.population = np.array([np.random.permutation(self.node_num - 1) for _ in range(self.population_num)])
         # 把所有的population都+1
         self.population += 1
@@ -114,11 +149,11 @@ class GA:
         self.costs = np.zeros(self.population_num, dtype=np.float64)
         self.evaluate()  # 评估第一代
 
-    def next_generation(self, parents_num=2, separate=False):
+    def next_population(self, parents_num=2, separate=False):
         """
         生成下一代
-        :param separate:
-        :param parents_num: 表示每次选择的父母数量，不重复，可以为1，可以为2
+        :param separate:是否优化下一代生成算法，True表示优化下一代生成算法，即(上代优解，交叉且变异，交叉不变异，变异不交叉)
+        :param parents_num: 是否优化交叉方案，如果为1，表示只有一个父母，表示不优化交叉方案；如果为2，表示有两个父母，表示优化交叉方案
         :return:
         """
         next_population = np.zeros(shape=(self.population.shape[0], self.population.shape[1]), dtype=np.int64)
@@ -225,6 +260,6 @@ class GA:
 
 
 if __name__ == '__main__':
-    ga = GA(500, 1000, 0.3, 0.8, 50, file_path='nodes2.npy', save_path='nodes2.npy')
-    ga.simulate(crossover_num=2, convergence_exit=False, separate=True)
+    ga = GA(500, 1000, 0.3, 0.8, 50, file_path='./data/nodes_GApy.npy', save_path='./data/nodes_GApy.npy')
+    ga.simulate(crossover_num=2, convergence_exit=None, separate=True, show=True)
     time.sleep(3)
